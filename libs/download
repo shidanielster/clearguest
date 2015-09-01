@@ -1,0 +1,71 @@
+#!/bin/sh
+
+OUTPUT_DIR=/tmp
+output=${OUTPUT_DIR}/tmp.html
+
+URL="$1"
+shift 1
+
+while getopts ":O:q" opt; do
+  case $opt in
+    O)
+      output="${OPTARG}"
+      ;;
+    q)
+      Q_MODE=true
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
+
+
+
+# SSO username and password
+SCRIPT_HOME=/net/slc05hzu/scratch/linshi/shells
+. ${SCRIPT_HOME}/libs/pass
+SSO_USERNAME=`get_sso_username`
+SSO_PASSWORD=`get_sso_password`
+
+if [ "${Q_MODE}" != true ]
+then
+    echo "Downloading $URL with ssouser: ${SSO_USERNAME}"
+    echo "Saving $output"
+fi
+
+# Path to wget command
+WGET='/usr/bin/wget -q'
+
+# Location of cookie file
+COOKIE_FILE=/tmp/$$.cookies
+
+
+# Output directory and file
+
+#
+# End of user configurable variable
+#
+
+# Contact updates site so that we can get SSO Params for logging in
+$WGET --user-agent="Mozilla/5.0"  ${URL} -O ./tmp_login.html
+
+AUTH_DATA=`cat ./tmp_login.html |  sed 's/<input type="hidden"/\n/g' | grep -i "value=" | sed 's/>/\n/g' | grep -E 'name="v"|OAM_REQ|request_id|site2pstoretoken' | sed 's/ name="//g' | sed 's/" value="/=/g' | sed 's/"//g' | awk '{printf("%s&",$0)}'`
+
+rm -f ./tmp_login.html
+
+# Extract request parameters for SSO
+#AUTH_DATA="${AUTH_DATA}&ssousername=lin.y.li%40oracle.com&password=Yuer%2B521"
+AUTH_DATA="${AUTH_DATA}&ssousername=${SSO_USERNAME}&password=${SSO_PASSWORD}"
+
+
+# where this script will be executed was compiled with OpenSSL. Remove the --secure-protocol option
+# if wget was not compiled with OpenSSL
+# Depending on the preference, the other options are --secure-protocol= auto|SSLv2|SSLv3|TLSv1
+$WGET --user-agent="Mozilla/5.0" --secure-protocol=auto --post-data $AUTH_DATA --save-cookies=$COOKIE_FILE --keep-session-cookies https://login.oracle.com/oam/server/sso/auth_cred_submit -O sso.out > /dev/null 2>&1
+
+rm -f sso.out
+
+$WGET  --user-agent="Mozilla/5.0"  --load-cookies=$COOKIE_FILE --save-cookies=$COOKIE_FILE --keep-session-cookies "$URL" -O $output> /dev/null 2>&1
+

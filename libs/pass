@@ -1,0 +1,51 @@
+#!/bin/sh
+
+#this file deal with password related 
+
+
+PASS_FILE=~/.pass
+umask 077
+
+
+
+function checkPassFile() {
+    if [ ! -f ${PASS_FILE} ]
+    then
+        touch $PASS_FILE
+    fi
+}
+
+function create_sso() {
+    echo -n "Pleae input your sso user name:"
+    read $ssouser
+    echo
+    echo -s "password:"
+    read -s $pass
+
+    echo "ssouser:${ssouser}" >> $PASS_FILE
+    echo "ssopwd:${pass}" >> $PASS_FILE
+}
+
+function get_sso_username() {
+    sso=`cat ${PASS_FILE} | grep ssouser`
+    if [ -z "${sso}" ]
+    then
+        create_sso
+    fi
+    ssouser=`cat ${PASS_FILE} | grep ssouser | cut -f 2 -d ":"`
+    echo ${ssouser}
+}
+
+function get_sso_password() {
+    ssopass=`cat ${PASS_FILE} | grep ssopwd`
+    if [ -z "${ssopass}" ]
+    then
+        create_sso
+    fi
+    pass=`cat ${PASS_FILE} | grep ssopwd| cut -f 2 -d ":"`
+
+    echo ${pass}
+}
+
+
+checkPassFile

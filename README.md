@@ -1,4 +1,5 @@
 # clearguest
+Login Oracle internal network by scanning the generated QCode.
 Generate qcode for oracle clear guest
 
 Install steps:
